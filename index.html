@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Contador Hi‑Lo — Limpio</title>
+<style>
+    :root{--fg:#111;--muted:#666;--line:#e5e7eb;--acc:#0ea5e9}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--fg);padding:20px}
+    h1{margin:0 0 12px 0}
+    .wrap{max-width:900px;margin:0 auto}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+    label{font-weight:600}
+    input[type="number"],select{padding:6px 8px;border:1px solid var(--line);border-radius:8px}
+    button{padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer;font-weight:700}
+    button:hover{border-color:#cbd5e1}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:10px 16px;margin:10px 0}
+    .grid3{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px 16px;margin:10px 0}
+    .card{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+    .muted{color:var(--muted);font-size:.95rem}
+    .metric{font-weight:800}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    details summary{cursor:pointer;font-weight:800;margin:6px 0}
+    .badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:.8rem;margin-left:6px}
+    .ok{color:#15803d}
+    .warn{color:#b91c1c}
+    .section h2{margin:0 0 6px 0;font-size:1.15rem}
+    hr{border:none;border-top:1px solid var(--line);margin:12px 0}
+  </style>
+<link href="manifest.webmanifest" rel="manifest"/><link href="apple-touch-icon.png" rel="apple-touch-icon"/><meta content="#0ea5e9" name="theme-color"/><meta content="yes" name="apple-mobile-web-app-capable"/><meta content="default" name="apple-mobile-web-app-status-bar-style"/><meta content="Hi-Lo" name="apple-mobile-web-app-title"/></head>
+<body>
+<div class="wrap">
+<h1>Contador Hi‑Lo</h1>
+<div class="card section">
+<h2>Configuración</h2>
+<div class="row">
+<label for="totalBarajas">Barajas en el zapato:</label>
+<input id="totalBarajas" min="1" step="1" type="number" value="6"/>
+<button id="btnReset">Reiniciar</button>
+</div>
+<div class="row">
+<button id="btnLow">+1 (2–6)</button>
+<button id="btnNeutral">0 (7–9)</button>
+<button id="btnHigh">−1 (10–A)</button>
+</div>
+<div class="muted">Tip: puedes usar teclas <span class="mono">L</span> (low), <span class="mono">N</span> (neutral), <span class="mono">H</span> (high) y <span class="mono">R</span> (reset).</div>
+</div>
+<div class="grid">
+<div class="card">
+<div>Cuenta (running): <span class="metric mono" id="runningCount">0</span></div>
+<div>True Count: <span class="metric mono" id="trueCount">0.00</span></div>
+<div class="muted">Barajas restantes: <span id="decksLeft">0.0</span> · Cartas restantes: <span id="cardsLeft">0</span></div>
+</div>
+<div class="card">
+<div>Carta alta (10‑A) restante: <span class="metric" id="leftHigh">0</span></div>
+<div>Prob. próxima alta: <span class="metric" id="pHigh">0.00</span>%</div>
+<div class="muted">Baraja índice: <span id="shoeIndex">1</span> / <span id="shoeTotal">6</span></div>
+</div>
+</div>
+<div class="card">
+<div class="grid3">
+<div>
+<div><b>Bajas vistas (2–6):</b> <span id="seenLow">0</span> <span class="muted">/ quedan <span id="remLow">0</span></span></div>
+</div>
+<div>
+<div><b>Neutras vistas (7–9):</b> <span id="seenNeutral">0</span> <span class="muted">/ quedan <span id="remNeutral">0</span></span></div>
+</div>
+<div>
+<div><b>Altas vistas (10–A):</b> <span id="seenHigh">0</span> <span class="muted">/ quedan <span id="remHigh">0</span></span></div>
+</div>
+</div>
+<div class="muted">Total vistas: <span id="seenTotal">0</span></div>
+</div>
+<div class="card section">
+<h2>Apuestas</h2>
+<div class="row">
+<label for="unidadBase">Unidad base (€):</label>
+<input id="unidadBase" min="1" step="1" type="number" value="10"/>
+<label for="rampaSelect">Rampa:</label>
+<select id="rampaSelect">
+<option value="conservador">Conservador (1–8)</option>
+<option selected="" value="estandar">Estándar (1–12)</option>
+<option value="agresivo">Agresivo (1–16)</option>
+<option value="kelly05">Kelly 0.5× (aprox.)</option>
+<option value="kelly10">Kelly 1.0× (aprox.)</option>
+</select>
+<label for="bankroll">Banca (€):</label>
+<input id="bankroll" min="100" step="50" type="number" value="2000"/>
+</div>
+<div class="row">
+        Apuesta sugerida: <span class="metric mono" id="betEuros">10</span> € <span class="badge">(<span id="betUnits">1</span>u)</span>
+        · Seguro: <span class="metric" id="insurance">No</span>
+</div>
+<div class="muted">La apuesta se calcula con el True Count redondeado. Kelly usa una aproximación típica: ~0.5% de ventaja por punto de TC.</div>
+</div>
+<div class="card section">
+<h2>Jugada básica (multi‑baraja, S17, DAS)</h2>
+<details open="">
+<summary>Resumen rápido</summary>
+<ul>
+<li><b>Manos duras</b>: 8− pide; 9 dobla vs 3–6 (si no, pide); 10 dobla vs 2–9; 11 dobla vs 2–10 (vs A según reglas); 12 planta vs 4–6 (si no, pide); 13–16 planta vs 2–6 (si no, pide); 17+ planta.</li>
+<li><b>Suaves</b>: A2–A3 dobla vs 5–6; A4–A5 dobla vs 4–6; A6 dobla vs 3–6; A7 planta vs 2,7,8; dobla vs 3–6; pide vs 9–A; A8–A9 planta.</li>
+<li><b>Pares</b>: A,A y 8,8 siempre; 2,2 y 3,3 vs 2–7; 4,4 vs 5–6; 5,5 no dividir (juega como 10); 6,6 vs 2–6; 7,7 vs 2–7; 9,9 vs 2–6 y 8–9; 10,10 nunca.</li>
+</ul>
+</details>
+</div>
+<div class="card section">
+<h2>Desviaciones Hi‑Lo (Illustrious 18 + Fab 4)</h2>
+<details open="">
+<summary>Índices clave (TC → acción)</summary>
+<ul>
+<li>Seguro: tomar con TC ≥ +3.</li>
+<li>16 vs 10: plantarse con TC ≥ 0.</li>
+<li>15 vs 10: plantarse con TC ≥ +4.</li>
+<li>10 vs 10: doblar con TC ≥ +4.</li>
+<li>10 vs A: doblar con TC ≥ +4.</li>
+<li>11 vs A: doblar con TC ≥ +1.</li>
+<li>9 vs 2: doblar con TC ≥ +1.</li>
+<li>9 vs 7: doblar con TC ≥ +3.</li>
+<li>16 vs 9: plantarse con TC ≥ +5.</li>
+<li>13 vs 2: plantarse con TC ≥ −1.</li>
+<li>13 vs 3: plantarse con TC ≥ −2.</li>
+<li>12 vs 2: plantarse con TC ≥ +3.</li>
+<li>12 vs 3: plantarse con TC ≥ +2.</li>
+<li>12 vs 4/5/6: plantarse con TC ≥ 0.</li>
+<li>Fab 4 (entrega tardía): 15 vs 10 (TC ≥ 0), 15 vs A (≥ +1), 15 vs 9 (≥ +2), 14 vs 10 (≥ +3).</li>
+</ul>
+</details>
+<div class="muted">Estos índices presuponen 6–8 barajas, S17 y DAS. Cambiarán con otras reglas (H17, sin surrender, etc.).</div>
+</div>
+<hr/>
+<div class="muted">© Hi‑Lo helper. Sin garantías; úsalo solo con fines educativos.</div>
+</div>
+<script>
+    // --- Constantes por baraja estándar ---
+    const CARDS_PER_DECK = 52;
+    const LOW_PER_DECK = 20;     // 2-6
+    const NEUTRAL_PER_DECK = 12; // 7-9
+    const HIGH_PER_DECK = 20;    // 10-A
+
+    // --- Estado ---
+    let totalDecks = 6;
+    let running = 0;
+    let seenLow = 0;
+    let seenNeutral = 0;
+    let seenHigh = 0;
+
+    // --- Helpers matemáticos ---
+    function clampDecks(n){ const x=Math.floor(Number(n)); return (isFinite(x)&&x>=1)?x:1; }
+    function cardsSeen(){ return seenLow + seenNeutral + seenHigh; }
+    function cardsLeft(){ return Math.max(0, totalDecks*CARDS_PER_DECK - cardsSeen()); }
+    function decksRemaining(){ return cardsLeft() / CARDS_PER_DECK; }
+    function shoeIndex(){ return 1 + Math.floor(cardsSeen() / CARDS_PER_DECK); }
+    function remaining(typePerDeck, seen){ return Math.max(0, totalDecks*typePerDeck - seen); }
+    function remainingHigh(){ return remaining(HIGH_PER_DECK, seenHigh); }
+    function probHigh(){ const left=cardsLeft(); return left? (remainingHigh()/left)*100 : 0; }
+    function trueCountExact(){ const decks=decksRemaining(); return decks>0 ? (running / decks) : 0; }
+    function trueCountRounded(){ return Math.floor(trueCountExact()); }
+
+    // --- Apuestas: ramps y Kelly aproximado ---
+    function approxEdgeFromTC(tcRounded){
+      // Aproximación típica Hi‑Lo multi‑baraja: ~0.5% por punto por encima de 0
+      return Math.max(0, tcRounded) * 0.005;
+    }
+    function kellyBet(bankroll, edge, variance=1.3, fraction=1.0){
+      if(edge<=0) return 1; // mínima si no hay ventaja
+      const euros = (edge/variance) * fraction * bankroll;
+      return Math.max(1, Math.floor(euros));
+    }
+    function unitsByRamp(tcRounded, ramp){
+      if(ramp==='conservador'){
+        if(tcRounded<=0) return 1;
+        if(tcRounded===1) return 2;
+        if(tcRounded===2) return 4;
+        if(tcRounded===3) return 6;
+        return 8;
+      }
+      if(ramp==='estandar'){
+        if(tcRounded<=0) return 1;
+        if(tcRounded===1) return 3;
+        if(tcRounded===2) return 6;
+        if(tcRounded===3) return 9;
+        return 12;
+      }
+      if(ramp==='agresivo'){
+        if(tcRounded<=0) return 1;
+        if(tcRounded===1) return 4;
+        if(tcRounded===2) return 8;
+        if(tcRounded===3) return 12;
+        return 16;
+      }
+      return 1;
+    }
+
+    // --- DOM ---
+    const elTotalDecks = document.getElementById('totalBarajas');
+    const elReset = document.getElementById('btnReset');
+    const btnLow = document.getElementById('btnLow');
+    const btnNeutral = document.getElementById('btnNeutral');
+    const btnHigh = document.getElementById('btnHigh');
+
+    const elRunning = document.getElementById('runningCount');
+    const elTrue = document.getElementById('trueCount');
+    const elCardsLeft = document.getElementById('cardsLeft');
+    const elDecksLeft = document.getElementById('decksLeft');
+    const elShoeIndex = document.getElementById('shoeIndex');
+    const elShoeTotal = document.getElementById('shoeTotal');
+    const elPHigh = document.getElementById('pHigh');
+
+    const elSeenLow = document.getElementById('seenLow');
+    const elSeenNeutral = document.getElementById('seenNeutral');
+    const elSeenHigh = document.getElementById('seenHigh');
+    const elSeenTotal = document.getElementById('seenTotal');
+    const elRemLow = document.getElementById('remLow');
+    const elRemNeutral = document.getElementById('remNeutral');
+    const elRemHigh = document.getElementById('remHigh');
+    const elLeftHigh = document.getElementById('leftHigh');
+
+    const elUnidadBase = document.getElementById('unidadBase');
+    const elRampa = document.getElementById('rampaSelect');
+    const elBankroll = document.getElementById('bankroll');
+    const elBetEuros = document.getElementById('betEuros');
+    const elBetUnits = document.getElementById('betUnits');
+    const elInsurance = document.getElementById('insurance');
+
+    // --- Render ---
+    function render(){
+      // Totales
+      elShoeTotal.textContent = totalDecks;
+      elRunning.textContent = running;
+      const tc = trueCountExact();
+      elTrue.textContent = tc.toFixed(2);
+      elCardsLeft.textContent = cardsLeft();
+      elDecksLeft.textContent = decksRemaining().toFixed(2);
+      elShoeIndex.textContent = Math.min(totalDecks, shoeIndex());
+      elPHigh.textContent = probHigh().toFixed(2);
+
+      // Vistas / quedan
+      elSeenLow.textContent = seenLow;
+      elSeenNeutral.textContent = seenNeutral;
+      elSeenHigh.textContent = seenHigh;
+      elSeenTotal.textContent = cardsSeen();
+
+      elRemLow.textContent = remaining(LOW_PER_DECK, seenLow);
+      elRemNeutral.textContent = remaining(NEUTRAL_PER_DECK, seenNeutral);
+      elRemHigh.textContent = remaining(HIGH_PER_DECK, seenHigh);
+      elLeftHigh.textContent = remainingHigh();
+
+      // Apuesta
+      const tcR = Math.floor(tc);
+      let units = 1;
+      const base = Math.max(1, Math.floor(Number(elUnidadBase.value)||1));
+      const ramp = elRampa.value;
+      const bankroll = Math.max(100, Math.floor(Number(elBankroll.value)||0));
+
+      if(ramp==='kelly05' || ramp==='kelly10'){
+        const edge = approxEdgeFromTC(tcR);
+        const fraction = ramp==='kelly10' ? 1.0 : 0.5;
+        const euros = kellyBet(bankroll, edge, 1.3, fraction);
+        units = Math.max(1, Math.floor(euros / base));
+      } else {
+        units = unitsByRamp(tcR, ramp);
+      }
+      elBetUnits.textContent = units;
+      elBetEuros.textContent = (units * base).toString();
+
+      // Seguro
+      elInsurance.textContent = tcR >= 3 ? 'Sí' : 'No';
+      elInsurance.className = 'metric ' + (tcR>=3 ? 'ok' : 'warn');
+    }
+
+    // --- Handlers ---
+    function onDecksChange(){ totalDecks = clampDecks(elTotalDecks.value); render(); }
+    function addLow(){ seenLow++; running += 1; render(); }
+    function addNeutral(){ seenNeutral++; render(); }
+    function addHigh(){ seenHigh++; running -= 1; render(); }
+    function resetAll(){
+      if(!confirm('¿Reiniciar el contador?')) return;
+      running=0; seenLow=0; seenNeutral=0; seenHigh=0; render();
+    }
+
+    // --- Eventos ---
+    elTotalDecks.addEventListener('input', onDecksChange);
+    btnLow.addEventListener('click', addLow);
+    btnNeutral.addEventListener('click', addNeutral);
+    btnHigh.addEventListener('click', addHigh);
+    elReset.addEventListener('click', resetAll);
+    elUnidadBase.addEventListener('input', render);
+    elRampa.addEventListener('change', render);
+    elBankroll.addEventListener('input', render);
+
+    // Atajos teclado
+    window.addEventListener('keydown', (e)=>{
+      const k = e.key.toLowerCase();
+      if(k==='l') addLow();
+      else if(k==='n') addNeutral();
+      else if(k==='h') addHigh();
+      else if(k==='r') resetAll();
+    });
+
+    // Init
+    render();
+  </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(console.error);
+    });
+  }
+</script>
+</body>
+</html>
