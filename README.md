@@ -1,4 +1,4 @@
-# Contador Hi‑Lo — PWA iPhone
+# Contador Hi‑Lo — PWA iPhone de Txanpu
 
 Esto es una **Web App instalable** (PWA) basada en tu `Contador_HiLo_LIMPIO.html`.
 Funciona en iPhone incluso **offline** una vez instalada.
@@ -6,9 +6,8 @@ Funciona en iPhone incluso **offline** una vez instalada.
 ## Cómo publicarla (opción rápida sin código)
 1) Sube esta carpeta a **GitHub** en un repositorio público.
 2) Activa **GitHub Pages** con la rama `main` y carpeta `/` (root).
-3) Tu app quedará en una URL HTTPS. Ejemplo: `https://tuusuario.github.io/tu-repo/`
+3) Tu app quedará en una URL HTTPS. Ejemplo: 
 
-Alternativas: **Cloudflare Pages**, **Netlify**, **Vercel**. Cualquiera con HTTPS vale.
 
 ## Instalar en iPhone
 1) Abre el enlace en **Safari**.
